@@ -1,0 +1,211 @@
+{% extends 'dashboard_layout.html' %}
+
+{% block sidebar_menu %}
+  <li class="header">MAIN NAVIGATION</li>
+  <li class="active">
+    <a href="/">
+      <i class="fa fa-dashboard"></i> <span>Dashboard</span>
+    </a>
+  </li>
+  <li>
+    <a href="/node_list">
+      <i class="fa fa-wifi"></i> <span>Nodes</span>
+    </a>
+  </li>
+{% endblock %}
+
+{% block dashboard_content %}
+  <!-- Content Header (Page header) -->
+  <section class="content-header">
+    <h1>
+      Dashboard
+    </h1>
+    <ol class="breadcrumb">
+      <li><a href="/"><i class="fa fa-dashboard"></i> Home</a></li>
+      <li class="active">Dashboard</li>
+    </ol>
+  </section>
+  <!-- Main content -->
+  <section class="content">
+    <!-- Small boxes (Stat box) -->
+    <div class="row">
+      <div class="col-md-4 col-xs-12">
+        <!-- small box -->
+        <div class="small-box bg-aqua">
+          <div class="inner">
+            <h3>{{ total_device_count }}</h3>
+            <p>Total Nodes</p>
+          </div>
+          <div class="icon">
+            <i class="ion ion-ios-gear-outline"></i>
+          </div>
+          <a href="/node_list" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
+        </div>
+      </div><!-- ./col -->
+      <div class="col-md-4 col-xs-12">
+        <!-- small box -->
+        <div class="small-box bg-green">
+          <div class="inner">
+            <h3>{{ total_device_count }}</h3>
+            <p>Online Nodes</p>
+          </div>
+          <div class="icon">
+            <i class="ion ion-pie-graph"></i>
+          </div>
+          <a href="/node_list" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
+        </div>
+      </div><!-- ./col -->
+      <div class="col-md-4 col-xs-12">
+        <!-- small box -->
+        <div class="small-box bg-red">
+          <div class="inner">
+            <h3>0</h3>
+            <p>Offline Nodes</p>
+          </div>
+          <div class="icon">
+            <i class="ion ion-pie-graph"></i>
+          </div>
+          <a href="/node_list" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
+        </div>
+      </div><!-- ./col -->
+    </div>
+    <div class="row">
+      <div class="col-md-12">
+        <div id="map" style="height: 430px;"></div>
+      </div>
+    </div>
+  </section>
+{% endblock %}
+
+{% block script %}
+<script src="http://webapi.amap.com/maps?v=1.3&key=25527483daf0c187658aa00317b66418"></script>
+<script>
+  var map;
+  var markerCluster;
+  //var gMarkers = new Object();
+
+  function distance(lat1, lon1, lat2, lon2, unit) {
+    var radlat1 = Math.PI * lat1/180;
+    var radlat2 = Math.PI * lat2/180;
+    var radlon1 = Math.PI * lon1/180;
+    var radlon2 = Math.PI * lon2/180;
+    var theta = lon1-lon2;
+    var radtheta = Math.PI * theta/180;
+    var dist = Math.sin(radlat1) * Math.sin(radlat2) + Math.cos(radlat1) * Math.cos(radlat2) * Math.cos(radtheta);
+    dist = Math.acos(dist);
+    dist = dist * 180/Math.PI;
+    dist = dist * 60 * 1.1515;
+    if (unit=="K") { dist = dist * 1.609344 }
+    if (unit=="N") { dist = dist * 0.8684 }
+    return dist;
+  }
+
+  function updateMap(map, lat, lng, distance) {
+    $.ajax({
+      type: 'GET',
+      url: '/nodes_nearby',
+      data: {'lat': lat, 'lng': lng, 'distance': distance},
+      success:function(response){
+        var markers = [];
+        gMarkers = {};
+        for (var index in response.devices) {
+          if (response.devices[index].location) {
+            var lat = response.devices[index].location[0];
+            var lng = response.devices[index].location[1];
+            var key = lat + ',' + lng;
+            if (gMarkers[key]) {
+              var newLat = lat;
+              var newLng = lng;
+              for(;;) {
+                var newLng = newLng + 0.00005;
+                var new_key = newLat + ',' + newLng
+                if (!gMarkers[new_key]) {
+                  lat = newLat;
+                  lng = newLng;
+                  key = new_key;
+                  break;
+                }
+              }
+            }
+
+            var contentString = '<div id="content">'+
+                '<div id="bodyContent">'+
+                '<p><a href="/device_detail/' + response.devices[index].id + '/"><B>' + response.devices[index].name + '</B></a></p>' + 
+                '<p>Address:' + response.devices[index].dev_addr + '</p>' +
+                '<p>EUI:' + response.devices[index].dev_eui + '</p>' +
+                '</div>'+
+                '</div>';
+  
+            var infowindow = new AMap.InfoWindow({
+              content: contentString,
+              offset:new AMap.Pixel(0,-5)
+            });
+  
+            var marker = new AMap.Marker({
+              position: new AMap.LngLat(lng, lat),
+              offset:new AMap.Pixel(-14,-34),
+            });
+
+            gMarkers[key] = contentString;
+
+            AMap.event.addListener(marker, 'click', (function(marker, key) {
+              return function() {
+                if (gMarkers[key]) {
+                  infowindow.setContent(gMarkers[key]);
+                  infowindow.open(map, marker.getPosition());
+                }
+              }
+            })(marker, key));
+
+            markers.push(marker);
+          }
+        }
+        markerCluster.clearMarkers();
+        markerCluster.addMarkers(markers);
+      }
+    });
+  }
+
+  function initMap() {
+    {% if user_location %}
+      var user_location = [{{ user_location.lng }}, {{ user_location.lat }}];
+    {% else %}
+      var user_location = [121.4086111, 31.005];
+    {% endif %}
+    map = new AMap.Map('map', {
+      zoom: 8,
+      center: user_location,
+    });
+
+    var bound;
+    var bound_latlng;
+    var center_latlng;
+    var dis;
+
+    map.plugin(["AMap.MarkerClusterer"],function() {
+      markerCluster = new AMap.MarkerClusterer(map,[], {maxZoom: 16});
+    });
+
+    bound = map.getBounds();
+    bound_latlng = bound.getNorthEast();
+    center_latlng = map.getCenter();
+    dis = distance(bound_latlng.lat, bound_latlng.lng, center_latlng.lat, center_latlng.lng);
+    updateMap(map, center_latlng.lat, center_latlng.lng, dis);
+
+    AMap.event.addListener(map, 'moveend', function() {
+      bound = map.getBounds();
+      bound_latlng = bound.getNorthEast();
+      center_latlng = map.getCenter();
+      dis = distance(bound_latlng.lat, bound_latlng.lng, center_latlng.lat, center_latlng.lng);
+      updateMap(map, center_latlng.lat, center_latlng.lng, dis);
+    });
+
+  }
+
+  $(document).ready(function(){
+    initMap();
+  });
+</script>
+
+{% endblock %}
+

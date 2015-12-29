@@ -1,0 +1,551 @@
+{% extends 'dashboard_layout.html' %}
+
+{% block dashboard_head_css %}
+<!-- DataTables -->
+<link rel="stylesheet" href="{% static "plugins/datatables/dataTables.bootstrap.css" %}">
+{% endblock %}
+
+{% block sidebar_menu %}
+  <li class="header">MAIN NAVIGATION</li>
+  <li>
+    <a href="/">
+      <i class="fa fa-dashboard"></i> <span>Dashboard</span>
+    </a>
+  </li>
+  <li>
+    <a href="/nodes_list' %}">
+      <i class="fa fa-wifi"></i> <span>Nodes</span>
+    </a>
+  </li>
+  <li class="active">
+    <a href="/node/{{ node.id }}">
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i class="fa fa-circle-o"></i>{{ node.dev_addr }}
+    </a>
+  </li>
+{% endblock %}
+
+{% block dashboard_content %}
+  <!-- Content Header (Page header) -->
+  <section class="content-header">
+    <h1>
+      Node Detail
+    </h1>
+    <ol class="breadcrumb">
+      <li><a href="/"><i class="fa fa-dashboard"></i> Home</a></li>
+      <li><a href="{% url 'DevicesList' %}"><i class="fa fa-wifi"></i> Devices</a></li>
+      <li class="active">{{ device.dev_addr }}</li>
+    </ol>
+  </section>
+  <!-- Main content -->
+  <section class="content">
+    <div class="row">
+      <div class="col-md-6">
+        <div class="box box-primary">
+          <div class="box-header with-border">
+            <h3 class="box-title">Basic Information</h3>
+          </div><!-- /.box-header -->
+          <div class="box-body">
+            <form class="form-horizontal">
+              <div class="form-group">
+                <label class="col-sm-3">Model Name:</label>
+                <div class="col-sm-9">
+                  {{ device.model }}
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="col-sm-3">Name:</label>
+                <div class="col-sm-9">
+                  {{ device.name }}
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="col-sm-3">MAC Address:</label>
+                <div class="col-sm-9">
+                  {{ device.dev_eui }}
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="col-sm-3">Network Address:</label>
+                <div class="col-sm-9">
+                  {{ device.dev_addr }}
+                </div>
+              </div>
+              <div class="form-group">
+                <div class="col-sm-3">
+                  <a href="#" data-toggle="modal" data-target="#packetsModal">
+                    View Packets 
+                  </a>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+        <div class="box box-primary">
+          <div class="box-header with-border">
+            <h3 class="box-title">Average</h3>
+          </div><!-- /.box-header -->
+          <div class="box-body">
+            <div class="col-xs-12 col-md-6">
+              <form class="form-horizontal">
+                <div class="form-group">
+                  <label class="col-sm-3">Average Packet:</label>
+                  <div class="col-sm-9" id="average_pkt">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="col-sm-3">Average SNR:</label>
+                  <div class="col-sm-9" id="average_snr">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="col-sm-3">Average RSSI:</label>
+                  <div class="col-sm-9" id="average_rssi">
+                  </div>
+                </div>
+              </form>
+            </div>
+            <div class="col-xs-12 col-md-6">
+              <form class="form-horizontal">
+                <div class="form-group">
+                  <label class="col-sm-3">Last Spreading Factor:</label>
+                  <div class="col-sm-9" id="last_sf">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="col-sm-3">Last SNR:</label>
+                  <div class="col-sm-9" id="last_snr">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="col-sm-3">Last RSSI:</label>
+                  <div class="col-sm-9" id="last_rssi">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="col-sm-3">Last Uplink Frame:</label>
+                  <div class="col-sm-9" id="last_up_frame">
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="box box-primary">
+          <div class="box-body">
+            <div id="map" style="height: 375px;"></div>
+          </div>
+        </div>
+        <div class="box box-primary">
+          <div class="box-header with-border">
+            <h3 class="box-title">Battery</h3>
+          </div><!-- /.box-header -->
+          <div class="box-body">
+            <form class="form-horizontal">
+              <div class="form-group">
+                <label class="col-sm-3">Battery:</label>
+                <div class="col-sm-9">
+                  -
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="col-sm-3">Battery Replaced:</label>
+                <div class="col-sm-9">
+                  -
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="col-sm-3">Replaced Battery By:</label>
+                <div class="col-sm-9">
+                  -
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-xs-12">
+        <!-- interactive chart -->
+        <div class="box box-primary">
+          <div class="box-header with-border">
+            <i class="fa fa-bar-chart-o"></i>
+            <h3 class="box-title">Uplink/Downlink Packets</h3>
+          </div>
+          <div class="box-body">
+            <div class="chart">
+              <canvas id="packets_chart" style="height:250px;"></canvas>
+            </div>
+          </div><!-- /.box-body-->
+        </div><!-- /.box -->
+      </div><!-- /.col -->
+    </div>
+    <div class="row">
+      <div class="col-xg-12 col-md-4">
+        <!-- LINE CHART -->
+        <div class="box box-primary">
+          <div class="box-header with-border">
+            <h3 class="box-title">RSSI</h3>
+          </div>
+          <div class="box-body">
+            <div class="chart">
+              <canvas id="rssi_chart" style="height:250px"></canvas>
+            </div>
+          </div><!-- /.box-body -->
+        </div><!-- /.box -->
+      </div>
+      <div class="col-xg-12 col-md-4">
+        <!-- LINE CHART -->
+        <div class="box box-primary">
+          <div class="box-header with-border">
+            <h3 class="box-title">SNR</h3>
+          </div>
+          <div class="box-body">
+            <div class="chart">
+              <canvas id="snr_chart" style="height:250px"></canvas>
+            </div>
+          </div><!-- /.box-body -->
+        </div><!-- /.box -->
+      </div>
+      <div class="col-xg-12 col-md-4">
+        <!-- DONUT CHART -->
+        <div class="box box-primary">
+          <div class="box-header with-border">
+            <h3 class="box-title">SF</h3>
+          </div>
+          <div class="box-body">
+            <canvas id="sf_chart" style="height:250px"></canvas>
+          </div><!-- /.box-body -->
+        </div><!-- /.box -->
+      </div>
+    </div>
+  </section>
+  <!-- Modal -->
+  <div class="modal fade" id="packetsModal" tabindex="-1" role="dialog" aria-labelledby="packetsModalLabel">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+          <h4 class="modal-title" id="myModalLabel">Uplink Packets</h4>
+        </div>
+        <div class="modal-body">
+          <div id="page_content">
+            <table id="packets_list_table" class="table table-bordered table-hover">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Application Data</th>
+                </tr>
+              </thead>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div id="page_selection"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block script %}
+<script src="{% static "plugins/datatables/jquery.dataTables.min.js" %}"></script>
+<script src="{% static "plugins/datatables/dataTables.bootstrap.min.js" %}"></script>
+<script src=https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.js></script>
+<!-- FLOT CHARTS -->
+<script src="{% static "plugins/flot/jquery.flot.min.js" %}"></script>
+<!-- FLOT RESIZE PLUGIN - allows the chart to redraw when the window is resized -->
+<script src="{% static "plugins/flot/jquery.flot.resize.min.js" %}"></script>
+<!-- FLOT PIE PLUGIN - also used to draw donut charts -->
+<script src="{% static "plugins/flot/jquery.flot.pie.min.js" %}"></script>
+<!-- FLOT CATEGORIES PLUGIN - Used to draw bar charts -->
+<script src="{% static "plugins/flot/jquery.flot.categories.min.js" %}"></script>
+<!-- ChartJS 1.0.1 -->
+<script src="{% static "plugins/chartjs/Chart.min.js" %}"></script>
+<script src="http://webapi.amap.com/maps?v=1.3&key=25527483daf0c187658aa00317b66418"></script>
+<script>
+var areaChartOptions = {
+  //Boolean - If we should show the scale at all
+  showScale: true,
+  //Boolean - Whether grid lines are shown across the chart
+  scaleShowGridLines: false,
+  //String - Colour of the grid lines
+  scaleGridLineColor: "rgba(0,0,0,.05)",
+  //Number - Width of the grid lines
+  scaleGridLineWidth: 1,
+  //Boolean - Whether to show horizontal lines (except X axis)
+  scaleShowHorizontalLines: true,
+  //Boolean - Whether to show vertical lines (except Y axis)
+  scaleShowVerticalLines: true,
+  //Boolean - Whether the line is curved between points
+  bezierCurve: true,
+  //Number - Tension of the bezier curve between points
+  bezierCurveTension: 0.3,
+  //Boolean - Whether to show a dot for each point
+  pointDot: false,
+  //Number - Radius of each point dot in pixels
+  pointDotRadius: 2,
+  //Number - Pixel width of point dot stroke
+  pointDotStrokeWidth: 2,
+  //Number - amount extra to add to the radius to cater for hit detection outside the drawn point
+  pointHitDetectionRadius: 2,
+  //Boolean - Whether to show a stroke for datasets
+  datasetStroke: true,
+  //Number - Pixel width of dataset stroke
+  datasetStrokeWidth: 2,
+  //Boolean - Whether to fill the dataset with a color
+  datasetFill: false,
+  //Boolean - whether to maintain the starting aspect ratio or not when responsive, if set to false, will take up entire container
+  maintainAspectRatio: true,
+  //Boolean - whether to make the chart responsive to window resizing
+  responsive: true,
+  animation: false,
+  multiTooltipTemplate: "<%= datasetLabel %> - <%= value %>"
+};
+
+var pieOptions = {
+  //Boolean - Whether we should show a stroke on each segment
+  segmentShowStroke: true,
+  //String - The colour of each segment stroke
+  segmentStrokeColor: "#fff",
+  //Number - The width of each segment stroke
+  segmentStrokeWidth: 2,
+  //Number - The percentage of the chart that we cut out of the middle
+  percentageInnerCutout: 50, // This is 0 for Pie charts
+  //Number - Amount of animation steps
+  animationSteps: 100,
+  //String - Animation easing effect
+  animationEasing: "easeOutBounce",
+  //Boolean - Whether we animate the rotation of the Doughnut
+  animateRotate: true,
+  //Boolean - Whether we animate scaling the Doughnut from the centre
+  animateScale: false,
+  //Boolean - whether to make the chart responsive to window resizing
+  responsive: true,
+  // Boolean - whether to maintain the starting aspect ratio or not when responsive, if set to false, will take up entire container
+  maintainAspectRatio: true,
+  animation: false,
+};
+
+var barChartOptions = {
+  //Boolean - Whether the scale should start at zero, or an order of magnitude down from the lowest value
+  scaleBeginAtZero: true,
+  //Boolean - Whether grid lines are shown across the chart
+  scaleShowGridLines: true,
+  //String - Colour of the grid lines
+  scaleGridLineColor: "rgba(0,0,0,.05)",
+  //Number - Width of the grid lines
+  scaleGridLineWidth: 1,
+  //Boolean - Whether to show horizontal lines (except X axis)
+  scaleShowHorizontalLines: true,
+  //Boolean - Whether to show vertical lines (except Y axis)
+  scaleShowVerticalLines: true,
+  //Boolean - If there is a stroke on each bar
+  barShowStroke: true,
+  //Number - Pixel width of the bar stroke
+  barStrokeWidth: 2,
+  //Number - Spacing between each of the X value sets
+  barValueSpacing: 5,
+  //Number - Spacing between data sets within X values
+  barDatasetSpacing: 1,
+  //Boolean - whether to make the chart responsive
+  responsive: true,
+  animation: false,
+  maintainAspectRatio: true,
+  multiTooltipTemplate: "<%= datasetLabel %> - <%= value %>"
+};
+
+var pie_colors = ["#f56954", "#00a65a", "#f39c12", "#00c0ef", "#3c8dbc", "#d2d6de"];
+var packetsChart = new Chart($("#packets_chart").get(0).getContext("2d"));
+var rssiChart = new Chart($("#rssi_chart").get(0).getContext("2d"));
+var snrChart = new Chart($("#snr_chart").get(0).getContext("2d"));
+var sfChart = new Chart($("#sf_chart").get(0).getContext("2d"));
+
+function initMap() {
+  {% if device.location %}
+    var device_latlng = [{{ device.location.lng }}, {{ device.location.lat }}];
+  {% else %}
+    var device_latlng = [121.4086111, 31.005];
+  {% endif %}
+  var map = new AMap.Map('map', {
+    zoom: 10,
+    center: device_latlng
+  });
+
+  {% if device.location %}
+    var marker = new AMap.Marker({
+      position: new AMap.LngLat({{ device.location.lng }}, {{ device.location.lat }}),
+    });
+    marker.setMap(map);
+  {% endif %}
+}
+
+function chart_update(){
+  var start_timestamp = Date.now();
+  var days = 10;
+  $.ajax({
+    type: 'GET',
+    url: '/get_history/',
+    data: {'dev_addr': '{{ device.dev_addr }}', 'start_timestamp': Math.floor(start_timestamp/1000), 'range':days },
+    success:function(response){ 
+      if (response.status == 'success') {
+        var labels = [];
+        var up_packets_data = [];
+        var down_packets_data = [];
+        var rssi_data = [];
+        var snr_data = [];
+        var sf_data = response.data.sf_data;
+        var date;
+        for (var i = days; i >= 0; i--) {
+          date = new Date(start_timestamp-i*24*60*60*1000);
+          labels.push((date.getMonth()+1)+'.'+date.getDate());
+          if (!response.data.uplink_data[(date.getMonth()+1)+'.'+date.getDate()]) {
+            up_packets_data.push(0);
+          } else {
+            up_packets_data.push(response.data.uplink_data[(date.getMonth()+1)+'.'+date.getDate()]);
+          }
+          if (!response.data.downlink_data[(date.getMonth()+1)+'.'+date.getDate()]) {
+            down_packets_data.push(0);
+          } else {
+            down_packets_data.push(response.data.uplink_data[(date.getMonth()+1)+'.'+date.getDate()]);
+          }
+          if (!response.data.rssi_data[(date.getMonth()+1)+'.'+date.getDate()]) {
+            rssi_data.push(0);
+          } else {
+            rssi_data.push(response.data.rssi_data[(date.getMonth()+1)+'.'+date.getDate()]);
+          }
+          if (!response.data.snr_data[(date.getMonth()+1)+'.'+date.getDate()]) {
+            snr_data.push(0);
+          } else {
+            snr_data.push(response.data.snr_data[(date.getMonth()+1)+'.'+date.getDate()].toFixed(2));
+          }
+        }
+
+        $('#average_pkt').html(response.data.packets + '/day'); 
+        $('#average_snr').html(response.data.snr.toFixed(2));
+        $('#average_rssi').html(response.data.rssi);  
+
+        var packetsChartData = {
+          labels: labels,
+          datasets: [
+            {
+              label: "Uplink Packets",
+              fillColor: "#00c0ef",
+              strokeColor: "#00c0ef",
+              pointColor: "rgba(210, 214, 222, 1)",
+              pointStrokeColor: "#c1c7d1",
+              pointHighlightFill: "#fff",
+              pointHighlightStroke: "rgba(220,220,220,1)",
+              data: up_packets_data 
+            },
+            {
+              label: "Downlink Packets",
+              fillColor: "#00a65a",
+              strokeColor: "#00a65a",
+              pointColor: "#00a65a",
+              pointStrokeColor: "rgba(60,141,188,1)",
+              pointHighlightFill: "#fff",
+              pointHighlightStroke: "rgba(60,141,188,1)",
+              data: down_packets_data
+            }
+          ]
+        };
+        var rssiChartData = {
+          labels: labels,
+          datasets: [
+            {
+              label: "Digital Goods",
+              fillColor: "rgba(60,141,188,0.9)",
+              strokeColor: "rgba(60,141,188,0.8)",
+              pointColor: "#3b8bba",
+              pointStrokeColor: "rgba(60,141,188,1)",
+              pointHighlightFill: "#fff",
+              pointHighlightStroke: "rgba(60,141,188,1)",
+              data: rssi_data
+            }
+          ]
+        };
+        var snrChartData = {
+          labels: labels,
+          datasets: [
+            {
+              label: "Digital Goods",
+              fillColor: "rgba(60,141,188,0.9)",
+              strokeColor: "rgba(60,141,188,0.8)",
+              pointColor: "#3b8bba",
+              pointStrokeColor: "rgba(60,141,188,1)",
+              pointHighlightFill: "#fff",
+              pointHighlightStroke: "rgba(60,141,188,1)",
+              data: snr_data
+            }
+          ]
+        };
+
+        var sfPieData = []
+        var j = 0;
+        for (var key in sf_data) {
+          sfPieData.push({
+            value: sf_data[key],
+            color: pie_colors[j],
+            highlight: pie_colors[j],
+            label: 'SF' + key
+          });
+          j += 1;
+        }
+        packetsChart.Bar(packetsChartData, barChartOptions);
+        rssiChart.Line(rssiChartData, areaChartOptions);
+        snrChart.Line(snrChartData, areaChartOptions);
+        sfChart.Doughnut(sfPieData, pieOptions);
+      }
+    }
+  });
+
+}
+
+$(document).ready(function() {
+  initMap();
+  $('#packets_list_table').DataTable({
+    'bFilter': false,
+    'aaSorting': [[0, 'desc']],
+    'aoColumns': [
+      {'mData':'time', 'bSortable': false},
+      {'mData':'app_data', 'bSortable': false},
+    ],
+    'bServerSide': true,
+    'sAjaxSource': '{% url 'GetPackets' %}',
+    'fnServerParams': function ( aoData ) {
+       aoData.push( { 'name': 'dev_addr', 'value': '{{ device.dev_addr }}' } );
+    }
+  });
+  
+  $.ajax({
+    type: 'GET',
+    url: '/get_latest_pkt_info/',
+    data: {'dev_addr': '{{ device.dev_addr }}'},
+    success:function(response){ 
+      if (response.status == 'success') {
+        $('#last_sf').html(response.data.last_sf);
+        $('#last_snr').html(response.data.last_snr);  
+        $('#last_rssi').html(response.data.last_rssi);  
+        $('#last_up_frame').html(response.data.last_up_frame);  
+      } else {
+        $('#last_sf').html('-');
+        $('#last_snr').html('-');  
+        $('#last_rssi').html('-');  
+        $('#last_up_frame').html('-');  
+      }
+    }
+  });
+
+  chart_update();
+
+  setInterval(function() {
+    chart_update();
+  }, 30000);
+
+});
+</script>
+{% endblock %}
+
