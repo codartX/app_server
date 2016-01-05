@@ -9,6 +9,7 @@ import logging
 import tornado.web
 import json
 from tornado import gen
+from base import *
 
 class NodeListHandler(BaseHandler):
     @tornado.web.authenticated
@@ -46,7 +47,7 @@ class AddNodeHandler(BaseHandler):
                     lora_node['geometry'] = loc_point
                 result = yield self.node_model.add_new_node(lora_node)
                 if result is None:
-                    return JsonResponse({'status': 'fail', 'message': 'Database fail'})
+                    self.write(json.dumps({'status': 'fail', 'message': 'Database fail'}))
                 
                 user_info = self.get_current_user()
                 user_info = yield self.user_model.get_user_by_id(user_info['id'])
@@ -119,52 +120,52 @@ class GetNodesHandler(BaseHandler):
     @tornado.web.authenticated
     @gen.coroutine
     def get(self, device_id, template_variables = {}):
-    try:
-        start = int(request.GET.get('iDisplayStart', 0))
-        limit = int(request.GET.get('iDisplayLength', 25))
-        sort_col_num = request.GET.get('iSortCol_0', 0)
-        sort_col_name = request.GET.get('mDataProp_{0}'.format(sort_col_num), 'value')
-        search_text = request.GET.get('sSearch', '').lower()
-        sort_dir = request.GET.get('sSortDir_0', 'asc')
-        sort_dir_prefix = (sort_dir=='desc' and '-' or '')
-        total, = UserProfile.objects.filter(user=request.user).values_list('node_count')[0]
-        if search_text:
-            q = Q()
-            searches = search_text.split()
-            for word in searches:
-                q = q & (Q(name__contains=word)|Q(model__contains=word)|Q(dev_addr__contains=word)|
-                         Q(dev_eui__contains=word))
-            display = LoraNode.objects.filter(owner=request.user).filter(q).count()
-            devices = LoraNode.objects.filter(owner=request.user).filter(q).order_by('{0}{1}'.format(sort_dir_prefix, sort_col_name))[start: start + limit]
-        else:
-            display = total
-            devices = LoraNode.objects.filter(owner=request.user).order_by('{0}{1}'.format(sort_dir_prefix, sort_col_name))[start: start + limit]
-
-        data = []
-        for x in devices:
-            if x.geometry:
-                location = {'lat': x.geometry.y, 'lng': x.geometry.x}
+        try:
+            start = int(request.GET.get('iDisplayStart', 0))
+            limit = int(request.GET.get('iDisplayLength', 25))
+            sort_col_num = request.GET.get('iSortCol_0', 0)
+            sort_col_name = request.GET.get('mDataProp_{0}'.format(sort_col_num), 'value')
+            search_text = request.GET.get('sSearch', '').lower()
+            sort_dir = request.GET.get('sSortDir_0', 'asc')
+            sort_dir_prefix = (sort_dir=='desc' and '-' or '')
+            total, = UserProfile.objects.filter(user=request.user).values_list('node_count')[0]
+            if search_text:
+                q = Q()
+                searches = search_text.split()
+                for word in searches:
+                    q = q & (Q(name__contains=word)|Q(model__contains=word)|Q(dev_addr__contains=word)|
+                             Q(dev_eui__contains=word))
+                display = LoraNode.objects.filter(owner=request.user).filter(q).count()
+                devices = LoraNode.objects.filter(owner=request.user).filter(q).order_by('{0}{1}'.format(sort_dir_prefix, sort_col_name))[start: start + limit]
             else:
-                location = {}
-            data.append({
-                         'name': x.name,
-                         'location': location,
-                         'model': x.model,
-                         'dev_addr': x.dev_addr,
-                         'dev_eui': x.dev_eui,
-                         'lora_version': x.lora_version,
-                         'id': x.id
-                        })
+                display = total
+                devices = LoraNode.objects.filter(owner=request.user).order_by('{0}{1}'.format(sort_dir_prefix, sort_col_name))[start: start + limit]
 
-        result = {'iTotalRecords': total,                  # num records before applying any filters
-                  'iTotalDisplayRecords':display , # num records after applying filters
-                  'sEcho':request.GET.get('sEcho',1),      # unaltered from query
-                  'aaData': data}
+            data = []
+            for x in devices:
+                if x.geometry:
+                    location = {'lat': x.geometry.y, 'lng': x.geometry.x}
+                else:
+                    location = {}
+                data.append({
+                             'name': x.name,
+                             'location': location,
+                             'model': x.model,
+                             'dev_addr': x.dev_addr,
+                             'dev_eui': x.dev_eui,
+                             'lora_version': x.lora_version,
+                             'id': x.id
+                            })
 
-    except Exception, e:
-        result = {'iTotalRecords': 0,                 # num records before applying any filters
-                  'iTotalDisplayRecords': 0,              # num records after applying filters
-                  'sEcho':request.GET.get('sEcho',1),     # unaltered from query
-                  'aaData': []}
+            result = {'iTotalRecords': total,                  # num records before applying any filters
+                      'iTotalDisplayRecords':display , # num records after applying filters
+                      'sEcho':request.GET.get('sEcho',1),      # unaltered from query
+                      'aaData': data}
 
-    return JsonResponse(result)
+        except Exception, e:
+            result = {'iTotalRecords': 0,                 # num records before applying any filters
+                      'iTotalDisplayRecords': 0,              # num records after applying filters
+                      'sEcho':request.GET.get('sEcho',1),     # unaltered from query
+                      'aaData': []}
+
+        return JsonResponse(result)

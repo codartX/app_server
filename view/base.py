@@ -6,15 +6,14 @@
 #  Copyright (c) 2014年 Jun Fang. All rights reserved.
 
 import tornado.web
-import lib.session
 import time
-import helper
+from lib import helper, session
 from tornado import gen
 
 class BaseHandler(tornado.web.RequestHandler):
     def __init__(self, *argc, **argkw):
         super(BaseHandler, self).__init__(*argc, **argkw)
-        self.session = lib.session.Session(self.application.session_manager, self)
+        self.session = session.Session(self.application.session_manager, self)
         self.jinja2 = self.settings.get('jinja2')
         self.jinja2 = helper.Filters(self.jinja2).register()
 

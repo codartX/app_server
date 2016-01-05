@@ -4,8 +4,9 @@
 import tornado.web
 import json
 import logging
+from base import *
 
-class NodePktPushHandler(tornado.web.RequestHandler):
+class NodePktPushHandler(BaseHandler):
     def post(self):
         try:
             data = json.loads(self.request.body)

@@ -4,6 +4,7 @@
 import tornado.web
 import json
 import logging
+from base import *
 
-class NodePktRecvHandler(tornado.web.RequestHandler):
+class NodePktRecvHandler(BaseHandler):
     def post(self):

@@ -17,9 +17,11 @@ import tornado.options
 import tornado.web
 from tornado import gen
 
-import handler.user
+from view import user, node, node_pkt, index, node_pkt_push
 
 from model.user import UserModel
+from model.node import NodeModel
+from model.node_pkt import NodePktModel
 
 from tornado.options import define, options
 from lib.session import Session, SessionManager
@@ -51,18 +53,18 @@ class Application(tornado.web.Application):
         )
 
         handlers = [
-            (r"/", view.index.IndexHandler),
-            (r"/login", view.user.LoginHandler),
-            (r"/logout", view.user.LogoutHandler),
-            (r"/nodes_list", view.node.LogoutHandler),
-            (r"/nodes_nearby", view.node.GetNodesNearbyHandler),
-            (r"/get_nodes", view.node.LogoutHandler),
-            (r"/node/(.*)", view.node.LogoutHandler),
-            (r"/get_pkts", view.node_pkt.LogoutHandler),
-            (r"/get_latest_pkt", view.node_pkt.LogoutHandler),
-            (r"/get_history", view.node_pkt.LogoutHandler),
+            (r"/", index.IndexHandler),
+            (r"/login", user.LoginHandler),
+            (r"/logout", user.LogoutHandler),
+            (r"/nodes_list", node.NodeListHandler),
+            (r"/nodes_nearby", node.GetNodesNearbyHandler),
+            (r"/get_nodes", node.GetNodesHandler),
+            (r"/node/(.*)", node.NodeDetailHandler),
+            (r"/get_pkts", node_pkt.GetPktsHandler),
+            (r"/get_latest_pkt", node_pkt.GetLatestPktInfoHandler),
+            (r"/get_history", node_pkt.GetHistoryHandler),
 
-            (r"/lora/push", view.node_pkt_push.NodePktPushHandler),
+            (r"/lora/push", node_pkt_push.NodePktPushHandler),
 
             (r"/(favicon\.ico)", tornado.web.StaticFileHandler, dict(path = settings["static_path"])),
             (r"/(sitemap.*$)", tornado.web.StaticFileHandler, dict(path = settings["static_path"])),
@@ -73,16 +75,16 @@ class Application(tornado.web.Application):
 
         ioloop = tornado.ioloop.IOLoop.instance()
 
-        self.db = momoko.Pool(dsn='dbname=lora user=postgres password=postgres host=localhost port=5432',
+        self.db = momoko.Pool(dsn='dbname=lora user=postgres password=cisco123 host=9.9.9.14 port=5432',
                               size=1,
                               ioloop=ioloop)
 
-        future = application.db.connect()
+        future = self.db.connect()
         ioloop.add_future(future, lambda f: ioloop.stop())
         ioloop.start()
         future.result()
 
-        self.cluster = Cluster(['127.0.0.1'])
+        self.cluster = Cluster(['9.9.9.5'])
         self.session = self.cluster.connect('lora')
         self.cass_conn = TornadoCassandra(self.session, ioloop=ioloop)
   
