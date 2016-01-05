@@ -9,8 +9,8 @@
     </div><!-- /.login-logo -->
     <div class="login-box-body">
       <p class="login-box-msg">Sign in to start your session</p>
+      {{ errors|dump_errors }}
       <form action="" method="post">
-        {% csrf_token %}
         <div class="form-group has-feedback">
           <input type="text" class="form-control" name="username" placeholder="Username">
           <span class="glyphicon glyphicon-user form-control-feedback"></span>
@@ -24,6 +24,7 @@
             <button type="submit" class="btn btn-primary btn-block btn-flat">Sign In</button>
           </div>
         </div>
+        {{ xsrf_form_html() }}
       </form>
 
 

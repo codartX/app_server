@@ -39,9 +39,7 @@ class Filters():
                 <div class="alert alert-danger alert-dismissable">
                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
                    <strong>Error!</strong>
-                   {% for error in errors %}
-                   {{ ','.join(error) }}
-                   {% endfor %}
+                   {{ ','.join(errors) }}
                 </div>
               </div>
             </div>

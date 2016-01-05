@@ -40,6 +40,7 @@ class LoginHandler(BaseHandler):
     @gen.coroutine
     def post(self, template_variables = {}):
         # validate the fields
+        template_variables['errors'] = []
         email = self.get_argument('email', '')
         password = self.get_argument('password', '')
 
@@ -55,7 +56,7 @@ class LoginHandler(BaseHandler):
                 self.redirect(self.get_argument('next', '/'))
                 return
 
-        template_variables['errors'] = ['Email or password is not correct']
+        template_variables['errors'].append('Email or password is not correct')
         self.get(template_variables)
 
 class LogoutHandler(BaseHandler):
